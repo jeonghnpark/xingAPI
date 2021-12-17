@@ -18,6 +18,11 @@ class XASession:
         XASession.login_state=0
 
 
+class XAQuery:
+    RES_PATH="C:\\eBest\\xingAPI\\Res\\"
+    tr_run
+
+
 class EBEst:
 
     def __init__(self, mode=None):
