@@ -4,6 +4,8 @@ from datetime import datetime
 import pythoncom
 import win32com.client
 
+import os
+
 
 class XASession:
     login_state = 0
@@ -52,7 +54,7 @@ class XAReal:
         print(result)
 
 
-class EBEst:
+class EBest:
     QUERY_LIMIT_10MIN = 200  # 10분당 최대 200개 쿼리, 초과하는 경우 연결 끊김
     LIMIT_SECONDS = 600  # 10분
 
@@ -68,7 +70,8 @@ class EBEst:
 
         run_mode = "EBEST_" + mode
         config = configparser.ConfigParser()
-        config.read('conf/config.ini')
+        config.read('D:\\dev\python\\xingAPI\\stocklab\\agent\\conf\\config.ini')
+
         self.user = config[run_mode]['user']
         self.passwd = config[run_mode]['password']
         self.cert_passwd = config[run_mode]['cert_passwd']
@@ -100,7 +103,7 @@ class EBEst:
     def _execute_query(self, res, in_block_name, out_block_name, *out_fields, **set_fields):
         print("current query cnt:", len(self.query_cnt))
         print(res, in_block_name, out_block_name)
-        while len(self.query_cnt) >= EBEst.QUERY_LIMIT_10MIN:
+        while len(self.query_cnt) >= EBest.QUERY_LIMIT_10MIN:
             time.sleep(1)
             print("waiting for execute query.. current query cnt:", len(self.query_cnt))
             self.query_cnt = list(
@@ -138,11 +141,49 @@ class EBEst:
         self.query_cnt.append(datetime.today())
 
         # from  English field to Korean field
-        for item in result:
-            for field in list(item.keys()):
-                if getattr(Field, res, None):
-                    res_field = getattr(Field, res, None)
-                    
+        # for item in result:
+        #     for field in list(item.keys()):
+        #         if getattr(Field, res, None):
+        #             res_field = getattr(Field, res, None)
 
-session = EBEst("DEMO")
-print(session.user)
+        return result
+
+    def get_tick_size(self, price):
+        if price < 1000:
+            return1
+        elif price >= 1000 and price < 5000:
+            return 5
+        elif price >= 5000 and price < 10000:
+            return 10
+        elif price >= 10000 and price < 50000:
+            return 50
+        elif price >= 50000 and price < 100000:
+            return 100
+        elif price >= 100000 and price < 500000:
+            return 500
+        elif price > 500000:
+            return 1000
+
+    def get_current_call_price_by_code(self, code=None):
+        """ TR: t1101 주식현재가 호가 조회
+        :param code:str 종목코드 
+        :return: 
+        """
+        tr_code = 't1101'
+        in_params = {"shcode": code}
+        out_params = {"hname", "price", "sign", "change", "diff", "volume",
+                      "jnilclose", "offerho1", "bidho1", "offerrem1", "bidrem1",
+                      "offerho2", "bidho2", "offerrem2", "bidrem2"}
+
+        result = self._execute_query('t1101', 't1101InBlock', 't1101OutBlock', *out_params, **in_params)
+
+        for item in result:
+            item["code"] = code
+
+        return result
+
+# session = EBest("DEMO")
+# print(session.user)
+# session.login()
+# result = session.get_current_call_price_by_code("005930")
+# print(result)
