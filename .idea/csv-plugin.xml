@@ -10,6 +10,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\stocklab\agent\stock_info.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
       </map>
     </option>
   </component>

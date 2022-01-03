@@ -6,6 +6,8 @@ import win32com.client
 
 import os
 
+import csv
+
 
 class XASession:
     login_state = 0
@@ -114,7 +116,7 @@ class EBest:
 
         # in_block_name 세팅
         for key, value in set_fields.items():
-            xa_query.SetFieldData(in_block_name, key, 0, value)
+            xa_query.SetFieldData(in_block_name, key, 0, value)  # 3번째 인수는 단일 데이터-> 0
 
         errorCode = xa_query.Request(0)
 
@@ -175,15 +177,65 @@ class EBest:
                       "jnilclose", "offerho1", "bidho1", "offerrem1", "bidrem1",
                       "offerho2", "bidho2", "offerrem2", "bidrem2"}
 
-        result = self._execute_query('t1101', 't1101InBlock', 't1101OutBlock', *out_params, **in_params)
+        result = self._execute_query(tr_code, tr_code + 'InBlock', tr_code + 'OutBlock', *out_params, **in_params)
 
         for item in result:
             item["code"] = code
 
         return result
 
-# session = EBest("DEMO")
+    def get_all_stock_info(self, market=None):
+
+        tr_code = 't8430'
+        marketcode = 1
+        if market == "KOSPI":
+            marketcode = 1
+        elif market == "KOSDAQ":
+            markecode = 2
+        elif market == "ALL":
+            marketcode = 0
+
+        in_params = {'gubun': marketcode}
+        out_params = {"hname", "jnilclose", "shcode"}
+        stocks = self._execute_query(tr_code, tr_code + 'InBlock', tr_code + 'OutBlock', *out_params, **in_params)
+
+        file = open('stock_info.csv', 'w')
+        writer = csv.writer(file)
+        writer.writerow(['종목명', "종목코드", "전일가"])
+        for stock in stocks:
+            writer.writerow([stock['hname'], str(stock['shcode']), stock['jnilclose']])
+
+        return stocks
+
+    def get_account(self):
+        accnum = self.xa_session_client.GetAccountListCount()
+        accountList = []
+        for i in range(accnum):
+            accountList = self.xa_session_client.GetAccountList(i)
+            print(accountList)
+        return accountList
+
+    def get_historical_closing_price(self, code=None, frequency=2, startdate='20210101', enddate='20211231',
+                                     comp_yn="N"):
+        tr_code = 't8413'
+        in_params = {'shcode': code, 'gubun': frequency, 'sdate': startdate, 'edate': enddate, 'comp_yn': comp_yn}
+        out_params = {'date', 'close', 'jdiff_vol'}
+        closing_price = self._execute_query(tr_code, tr_code + 'InBlock', tr_code + "OutBlock1", *out_params,
+                                            **in_params)
+        return closing_price
+
+
+session = EBest("DEMO")
 # print(session.user)
-# session.login()
-# result = session.get_current_call_price_by_code("005930")
-# print(result)
+session.login()
+
+result = session.get_current_call_price_by_code("005930")
+print(f"price={result[0]['price']}")
+# accList = session.get_account()
+# kospi_all_stock = session.get_all_stock_info("KOSPI")
+# print(kospi_all_stock)
+# print(kospi_all_stock)
+closing_prices = session.get_historical_closing_price('005930')
+print('date      closing price    volume')
+for d in closing_prices:
+    print(f"{d['date']}  {d['close']}  {d['jdiff_vol']}")
