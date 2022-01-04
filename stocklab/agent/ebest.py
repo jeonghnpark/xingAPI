@@ -57,7 +57,7 @@ class XAReal:
 
 
 class EBest:
-    QUERY_LIMIT_10MIN = 200  # 10분당 최대 200개 쿼리, 초과하는 경우 연결 끊김
+    QUERY_LIMIT_10MIN = 200  # 10분당 최대 200개 쿼리, 초과하는 경우 연결 끊김, 초당 3건??
     LIMIT_SECONDS = 600  # 10분
 
     def __init__(self, mode=None):
@@ -110,7 +110,7 @@ class EBest:
             print("waiting for execute query.. current query cnt:", len(self.query_cnt))
             self.query_cnt = list(
                 filter(lambda x: (datetime.today() - x).total_seconds() < EBest.LIMIT_SECONDS, self.query_cnt))
-            # 오래된 쿼리를 삭제하나?? 
+            # 오래된 쿼리를 삭제하나?? -> OK. 쿼리는 한번에 하나씩 실행됨. 밀려서 실행하지 않음. 응답을 받을때까지 쿼리를 종료하지 않음
         xa_query = win32com.client.DispatchWithEvents("XA_DataSet.XAQuery", XAQuery)
         xa_query.LoadFromResFile(XAQuery.RES_PATH + res + ".res")
 
@@ -120,17 +120,17 @@ class EBest:
 
         errorCode = xa_query.Request(0)
 
-        # 요청후 대기
+        # 요청후 대기 응답을 받을때까지 쿼리를 종료하지 않음
         waiting_cnt = 0
         while xa_query.tr_run_state == 0:
             waiting_cnt += 1
             if waiting_cnt % 1000000 == 0:
-                print("waiting..", self.xa_session_client.GetLastError())
+                print("waiting..^^", self.xa_session_client.GetLastError())
             pythoncom.PumpWaitingMessages()
 
         # result block
         result = []
-        count = xa_query.GetBlockCount(out_block_name)
+        count = xa_query.GetBlockCount(out_block_name)  # OCCUR인 경우가 >1 이라고 함
 
         for i in range(count):
             item = {}
@@ -152,7 +152,7 @@ class EBest:
 
     def get_tick_size(self, price):
         if price < 1000:
-            return1
+            return 1
         elif price >= 1000 and price < 5000:
             return 5
         elif price >= 5000 and price < 10000:
@@ -182,6 +182,16 @@ class EBest:
         for item in result:
             item["code"] = code
 
+        return result
+
+    def get_code_list(self, market=None):
+        tr_code = 't8436'
+        if market not in ['KOSPI', 'KOSDAQ', 'ALL']:
+            raise Exception("need market param('ALL','KOSPI','KOSDAQ')")
+        market_code = {"ALL": "0", "KOSPI": "1", "KOSDAQ": "2"}
+        in_params = {'gubun': market_code[market]}
+        out_params = {'hanme', 'shcode', 'expcode', 'etfgubun', 'memedan', 'gubun', 'spac_gubun'}
+        result = self._execute_query(tr_code, tr_code + 'InBlock', tr_code + "OutBlock", *out_params, **in_params)
         return result
 
     def get_all_stock_info(self, market=None):
@@ -225,17 +235,35 @@ class EBest:
         return closing_price
 
 
-session = EBest("DEMO")
-# print(session.user)
-session.login()
+if __name__ == "__main__":
+    session = EBest("DEMO")
+    # print(session.user)
+    session.login()
 
-result = session.get_current_call_price_by_code("005930")
-print(f"price={result[0]['price']}") 
-# accList = session.get_account()
-# kospi_all_stock = session.get_all_stock_info("KOSPI")
-# print(kospi_all_stock)
-# print(kospi_all_stock)
-closing_prices = session.get_historical_closing_price('005930')
-print('date      closing price    volume')
-for d in closing_prices:
-    print(f"{d['date']}  {d['close']}  {d['jdiff_vol']}")
+    # result = session.get_current_call_price_by_code("005930")
+    # print(f"price={result[0]['price']}")
+    # accList = session.get_account()
+    # kospi_all_stock = session.get_all_stock_info("KOSPI")
+    # print(kospi_all_stock)
+    # print(kospi_all_stock)
+    # closing_prices = session.get_historical_closing_price('005930')
+    # print('date      closing price    volume')
+    # for d in closing_prices:
+    #     print(f"{d['date']}  {d['close']}  {d['jdiff_vol']}")
+    # code_list = session.get_code_list("KOSPI")
+    # print(code_list)
+
+    all_result = session.get_code_list("ALL")
+    assert all_result is not None
+    print(f"all result {len(all_result)}")
+
+    kosdaq_result = session.get_code_list("KOSDAQ")
+    assert kosdaq_result is not None
+    print(f"kosdaq result {len(kosdaq_result)}")
+
+    kosdaq_result = session.get_code_list("KOSPI")
+    assert kosdaq_result is not None
+    print(f"kosdaq result {len(kosdaq_result)}")
+
+    # kospi_result = session.get_code_list("KOSPI")
+    # assert kospi_result is not None
