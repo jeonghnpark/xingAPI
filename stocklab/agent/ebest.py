@@ -230,7 +230,7 @@ session = EBest("DEMO")
 session.login()
 
 result = session.get_current_call_price_by_code("005930")
-print(f"price={result[0]['price']}")
+print(f"price={result[0]['price']}") 
 # accList = session.get_account()
 # kospi_all_stock = session.get_all_stock_info("KOSPI")
 # print(kospi_all_stock)
