@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import *
 import sys
+from PyQt5.QtCore import *
 
 
 class MyWindow(QMainWindow):
@@ -11,6 +12,9 @@ class MyWindow(QMainWindow):
         self.setGeometry(200, 200, 400, 400)  # X,Y, width, height
         label = QLabel("code ", self)
         label.move(20, 20)
+        btn1 = QPushButton("닫기", self)
+        btn1.move(250, 20)
+        btn1.clicked.connect(QCoreApplication.quit)
         self.input_code = QLineEdit("", self)
         self.input_code.move(100, 20)
         self.input_code.textChanged.connect(self.when_code_input)
