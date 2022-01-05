@@ -243,6 +243,8 @@ if __name__ == "__main__":
     # result = session.get_current_call_price_by_code("005930")
     # print(f"price={result[0]['price']}")
     # accList = session.get_account()
+    # print(accList)
+    #
     # kospi_all_stock = session.get_all_stock_info("KOSPI")
     # print(kospi_all_stock)
     # print(kospi_all_stock)
@@ -264,6 +266,7 @@ if __name__ == "__main__":
     kosdaq_result = session.get_code_list("KOSPI")
     assert kosdaq_result is not None
     print(f"kosdaq result {len(kosdaq_result)}")
-    
+
     # kospi_result = session.get_code_list("KOSPI")
     # assert kospi_result is not None
+    # session.logout()

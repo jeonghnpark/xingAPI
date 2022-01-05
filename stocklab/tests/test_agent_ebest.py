@@ -23,8 +23,8 @@ class TestEbest(unittest.TestCase):
         assert all_result is not None
         kosdaq_result = self.ebest.get_code_list("KOSDAQ")
         assert kosdaq_result is not None
-        kospi_result = self.ebest.get_code_list("KOSPI")
-        assert kospi_result is not None
+        # kospi_result = self.ebest.get_code_list("KOSPI")
+        # assert kospi_result is not None
         # try:
         #     error_result = self.ebest.get_code_list("kospi")
         # except:
