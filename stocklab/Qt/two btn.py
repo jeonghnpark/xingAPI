@@ -23,10 +23,10 @@ class MyWindow(QMainWindow):
         btn2.clicked.connect(self.btn2clicked)
 
     def btn1clicked(self):
-        self.tex1.setText("버튼1이 클릭됨")
+        self.text1.setText("아빠 로블록스")
 
     def btn2clicked(self):
-        self.tex2.setText("버튼2이 클릭됨")
+        self.text2.setText("30분만")
 
 
 if __name__ == "__main__":
