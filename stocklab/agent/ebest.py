@@ -264,6 +264,6 @@ if __name__ == "__main__":
     kosdaq_result = session.get_code_list("KOSPI")
     assert kosdaq_result is not None
     print(f"kosdaq result {len(kosdaq_result)}")
-
+    
     # kospi_result = session.get_code_list("KOSPI")
     # assert kospi_result is not None
