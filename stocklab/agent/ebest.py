@@ -249,23 +249,24 @@ if __name__ == "__main__":
     # print(kospi_all_stock)
     # print(kospi_all_stock)
     # closing_prices = session.get_historical_closing_price('005930')
+
     # print('date      closing price    volume')
     # for d in closing_prices:
     #     print(f"{d['date']}  {d['close']}  {d['jdiff_vol']}")
     # code_list = session.get_code_list("KOSPI")
     # print(code_list)
 
-    all_result = session.get_code_list("ALL")
-    assert all_result is not None
-    print(f"all result {len(all_result)}")
-
-    kosdaq_result = session.get_code_list("KOSDAQ")
-    assert kosdaq_result is not None
-    print(f"kosdaq result {len(kosdaq_result)}")
-
-    kosdaq_result = session.get_code_list("KOSPI")
-    assert kosdaq_result is not None
-    print(f"kosdaq result {len(kosdaq_result)}")
+    # all_result = session.get_code_list("ALL")
+    # assert all_result is not None
+    # print(f"all result {len(all_result)}")
+    # 
+    # kosdaq_result = session.get_code_list("KOSDAQ")
+    # assert kosdaq_result is not None
+    # print(f"kosdaq result {len(kosdaq_result)}")
+    # 
+    # kosdaq_result = session.get_code_list("KOSPI")
+    # assert kosdaq_result is not None
+    # print(f"kosdaq result {len(kosdaq_result)}")
 
     # kospi_result = session.get_code_list("KOSPI")
     # assert kospi_result is not None
