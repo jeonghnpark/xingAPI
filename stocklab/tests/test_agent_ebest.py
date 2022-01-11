@@ -43,7 +43,7 @@ class TestEbest(unittest.TestCase):
 
         # MA
         ma_range = [5, 25, 120, 250]
-        ma_color = ['red', 'yellow', 'pink', 'black']
+        # ma_color = ['red', 'yellow', 'pink', 'black']
         for i in range(len(ma_range)):
             df_closing[f"ma{ma_range[i]}"] = df_closing['close'].rolling(window=ma_range[i]).mean()
 
@@ -53,7 +53,7 @@ class TestEbest(unittest.TestCase):
         df_closing.plot(kind='line', x='date', y='close', ax=ax)
 
         for i in range(len(ma_range)):
-            df_closing.plot(kind='line', x='date', y=f'ma{ma_range[i]}', ax=ax, color=ma_color[i])
+            df_closing.plot(kind='line', x='date', y=f'ma{ma_range[i]}', ax=ax)
 
         plt.show()
 
