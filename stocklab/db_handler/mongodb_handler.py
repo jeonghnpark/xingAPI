@@ -41,35 +41,35 @@ class MongoDBHandler:
             condition = {}  # no condition-> all data in db_collection
         if db_name is None or collection_name is None:
             raise Exception("Need to param db_name, db_collection")
-        return self._client[db_name][db_collection].find(condition, {"_id": False}, no_cursor_timeout=True,
-                                                         cursor_type=CursorType.EXHAUST)
+        return self._client[db_name][collection_name].find(condition, {"_id": False}, no_cursor_timeout=True,
+                                                           cursor_type=CursorType.EXHAUST)
 
-    def delete_items(self, condition=None, db_name=None, db_collection=None):
+    def delete_items(self, condition=None, db_name=None, collection_name=None):
         if condition is None or not isinstance(condition, dict):
             raise Exception("need condition as a dict")
 
-        if db_name is None or db_collection is None:
+        if db_name is None or collection_name is None:
             raise Exception("need db_name, db_collection")
 
-        return self._client[db_name][db_collection].delete_many(condition)
+        return self._client[db_name][collection_name].delete_many(condition)
 
-    def update_items(self, condition=None, update_value=None, db_name=None, db_collection=None):
+    def update_items(self, condition=None, update_value=None, db_name=None, collection_name=None):
         if condition is None or not isinstance(condition, dict):
             raise Exception("need condition as a dict")
 
-        if db_name is None or db_collection is None:
+        if db_name is None or collection_name is None:
             raise Exception("need db_name, db_collection")
 
-        return self._client[db_name][db_collection].update_many(filter=condition, update=update_value)
+        return self._client[db_name][collection_name].update_many(filter=condition, update=update_value)
 
-    def update_item(self, condition=None, update_value=None, db_name=None, db_collection=None):
+    def update_item(self, condition=None, update_value=None, db_name=None, collection_name=None):
         if condition is None or not isinstance(condition, dict):
             raise Exception("need condition as a dict")
 
-        if db_name is None or db_collection is None:
+        if db_name is None or collection_name is None:
             raise Exception("need db_name, db_collection")
 
-        return self._client[db_name][db_collection].update_one(filter=condition, update=update_value)
+        return self._client[db_name][collection_name].update_one(filter=condition, update=update_value)
 
     def aggregate(self, pipeline=None, db_name=None, collection_name=None):
         """
@@ -86,15 +86,24 @@ class MongoDBHandler:
             raise Exception("need db_name, db_collection")
         return self._client[db_name][collection_name].aggregate(pipeline)
 
-    def text_search(self, text=None, db_name=None, db_collection=None):
+    def text_search(self, text=None, db_name=None, collection_name=None):
         if text is None or not isinstance(text, str):
             raise Exception("need text str")
 
-        if db_name is None or db_collection is None:
+        if db_name is None or collection_name is None:
             raise Exception("need db_name, db_collection")
 
-        return self._client[db_name][db_collection].find({"$text": {"$sear"}})
+        return self._client[db_name][collection_name].find({"$text": {"$sear"}})
 
 
 if __name__ == "__main__":
     db = MongoDBHandler()
+    # id = db.insert_item({'name': "Paul", 'author': "brown"}, db_name="TEST_DATABASE_NAME", collection_name='book')
+
+    cursor = db.find_items(db_name="TEST_DATABASE_NAME", collection_name='book')
+
+    assert cursor
+
+    db.delete_items(condition={'names': "Paul"}, db_name="TEST_DATABASE_NAME", collection_name='book')
+    for doc in cursor:
+        print(doc)
