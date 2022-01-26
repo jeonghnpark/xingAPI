@@ -80,6 +80,7 @@ class EBest:
         self.host = config[run_mode]['host']
         self.port = config[run_mode]['port']
         self.account = config[run_mode]['account']
+        self.account_deriva = config[run_mode]['account_deriva']
 
         # COM객체를 만든다. 인자1: COM 이름, 인자2:이벤트 콜백시 호출될 클래스
         # 콜백시 호출될 클래스에는 Login()과 Disconnect() 메서드가 정의되어있으면
@@ -233,6 +234,17 @@ class EBest:
         closing_price = self._execute_query(tr_code, tr_code + 'InBlock', tr_code + "OutBlock1", *out_params,
                                             **in_params)
         return closing_price
+
+    def chart_min(self, code=None, ncnt=None, qrycnt=None, edate=None, cts_date='', cts_time=' '):
+        time.sleep(0.5)
+        tr_code = 't8412'
+
+        MYNAME = tr_code
+        INBLOCK = f"{MYNAME}InBlock"
+        INBLOCK1 = f"{MYNAME}InBlock1"
+        OUTBLOCK = f"{MYNAME}OutBlock"
+        OUTBLOCK1 = f"{MYNAME}OutBlock1"
+        OUTBLOCK2 = f"{MYNAME}OutBlock2"
 
 
 if __name__ == "__main__":
