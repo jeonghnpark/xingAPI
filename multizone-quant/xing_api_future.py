@@ -5,6 +5,8 @@ import time
 import configparser
 
 XING_PATH = "C:\\eBest\\xingAPI"
+RES_PATH = "C:\\eBest\\xingAPI\\Res\\"
+
 TODAY = time.strftime("%Y%m%d")
 TODAY_TIME = time.strftime("%H%M%S")
 TODAY_S = time.strftime("%Y-%m-%d")
@@ -34,6 +36,9 @@ class XAQueryEventHandler:
         XAQueryEventHandler.query_code = code
         XAQueryEventHandler.query_state = 1
 
+    def OnReceiveMessage(self, systemError, messageCode, message):
+        print("OnReceiveMessage: ", systemError, messageCode, message)
+    
 
 def login(mode="DEMO"):
     instXASession = win32com.client.DispatchWithEvents("XA_Session.XASession", XASessionEventHandler)
@@ -73,7 +78,8 @@ def wait_for_event(code):
 
 
 def get_8432():
-    """코스피 지수 선물 마스터 조회"""
+    """코스피 지수 선물 마스터 조회
+    미니선물은 8435에서 조회할것"""
     tr_code = 't8432'
     INBLOCK = f"{tr_code}InBlock"
     INBLOCK1 = f"{tr_code}InBlock1"
@@ -108,9 +114,108 @@ def get_8432():
     return result1
 
 
+def get_2101(code):
+    """ 선옵 현재가 조회"""
+    tr_code = 't2101'
+    INBLOCK = f"{tr_code}InBlock"
+    INBLOCK1 = f"{tr_code}InBlock1"
+    OUTBLOCK = f"{tr_code}OutBlock"
+    OUTBLOCK1 = f"{tr_code}OutBlock1"
+    OUTBLOCK2 = f"{tr_code}OutBlock2"
+    OUTBLOCK3 = f"{tr_code}OutBlock3"
+
+    # 쿼리 오브젝트를 만들고..
+    query = win32com.client.DispatchWithEvents("XA_DataSet.XAQuery", XAQueryEventHandler)
+    # TR파일 등록하고
+    query.ResFileName = "C:\\eBest\\xingAPI\\Res\\" + tr_code + ".res"
+    # 입력인자 설정하고..
+
+    query.SetFieldData(INBLOCK, "focode", 0, code)
+
+    query.Request(0)
+
+    ret = wait_for_event(tr_code)
+    if ret == 0:
+        return [{"error": {'message': tr_code + " msg error"}}]
+
+    result1 = []
+    basis = query.GetFieldData(OUTBLOCK, 'basis', 0).strip()
+    price = query.GetFieldData(OUTBLOCK, 'price', 0).strip()
+    sign = query.GetFieldData(OUTBLOCK, 'sign', 0).strip()
+    theoryprice = query.GetFieldData(OUTBLOCK, 'theoryprice', 0).strip()
+    delta = query.GetFieldData(OUTBLOCK, 'delt', 0).strip()
+    gamma = query.GetFieldData(OUTBLOCK, 'gama', 0).strip()
+    theta = query.GetFieldData(OUTBLOCK, 'ceta', 0).strip()
+
+    vega = query.GetFieldData(OUTBLOCK, 'vega', 0).strip()
+
+    lst = {'code': code, 'basis': basis, 'price': float(price), 'sign': float(sign),
+           'delta': float(delta), 'gamma': float(gamma), 'vega': float(vega), 'theta': float(theta)}
+
+    result1.append(lst)
+
+    return [result1]
+
+
 def get_2301(yyyymm):
     """옵션 전광판"""
     tr_code = 't2301'
+    INBLOCK = f"{tr_code}InBlock"
+    INBLOCK1 = f"{tr_code}InBlock1"
+    OUTBLOCK = f"{tr_code}OutBlock"
+    OUTBLOCK1 = f"{tr_code}OutBlock1"
+    OUTBLOCK2 = f"{tr_code}OutBlock2"
+    OUTBLOCK3 = f"{tr_code}OutBlock3"
+
+    # deriva_acc = '55551047139'
+    # passwd = 'hn141437'
+
+    # 쿼리 오브젝트를 만들고..
+    query = win32com.client.DispatchWithEvents("XA_DataSet.XAQuery", XAQueryEventHandler)
+    # TR파일 등록하고
+    query.ResFileName = "C:\\eBest\\xingAPI\\Res\\" + tr_code + ".res"
+    # 입력인자 설정하고..
+    query.SetFieldData(INBLOCK, 'yyyymm', 0, yyyymm)
+    query.SetFieldData(INBLOCK, 'gubun', 0, "G")
+    query.Request(0)
+
+    ret = wait_for_event(tr_code)
+
+    if ret == 0:
+        return [{'error': {'message': tr_code + ' msg error'}}]
+
+    result1 = []
+    result2 = []
+
+    # for call
+    nCount = query.GetBlockCount(OUTBLOCK1)
+    for i in range(nCount):
+        strike = query.GetFieldData(OUTBLOCK1, "actprice", i).strip()
+        code = query.GetFieldData(OUTBLOCK1, "optcode", i).strip()
+        delta = query.GetFieldData(OUTBLOCK1, "delt", i).strip()
+        gamma = query.GetFieldData(OUTBLOCK1, "gama", i).strip()
+        theta = query.GetFieldData(OUTBLOCK1, "ceta", i).strip()
+        vega = query.GetFieldData(OUTBLOCK1, "vega", i).strip()
+
+        lst = {'strike': float(strike), 'code': code, 'delta': float(delta), 'gamma': float(gamma),
+               'theta': float(theta), 'vega': float(vega)}
+        result1.append(lst)
+
+    # for put
+    nCount = query.GetBlockCount(OUTBLOCK2)
+    for i in range(nCount):
+        strike = query.GetFieldData(OUTBLOCK2, "actprice", i).strip()
+        code = query.GetFieldData(OUTBLOCK2, "optcode", i).strip()
+        delta = query.GetFieldData(OUTBLOCK2, "delt", i).strip()
+        gamma = query.GetFieldData(OUTBLOCK2, "gama", i).strip()
+        theta = query.GetFieldData(OUTBLOCK2, "ceta", i).strip()
+        vega = query.GetFieldData(OUTBLOCK2, "vega", i).strip()
+
+        lst = {'strike': float(strike), 'code': code, 'delta': float(delta), 'gamma': float(gamma),
+               'theta': float(theta), 'vega': float(vega)}
+        result2.append(lst)
+
+    return [result1, result2]
 
 
 def get_0441():
@@ -198,3 +303,6 @@ if __name__ == '__main__':
     for each in cur_hold[1]:
         print(f"{each['code']:<10}{each['qty']:<10}{each['buy_sell']:<10}",
               f"{each['price']:<10}{each['trade_profit']:<10}{each['value_profit']:<10}")
+
+    callPutList = get_2301('202202')
+    print(callPutList)

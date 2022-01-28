@@ -246,12 +246,22 @@ class EBest:
         OUTBLOCK1 = f"{MYNAME}OutBlock1"
         OUTBLOCK2 = f"{MYNAME}OutBlock2"
 
+    def get_0424(self):
+        """주식 잔고조회"""
+        tr_code = 't0424'
+        in_params = {'accno': self.account, 'passwd': self.passwd,
+                     'prcgb': 1, 'chegb': 0, 'charge': 1}
+        out_params = {'tappamt'}
+        result = self._execute_query(tr_code, tr_code + 'InBlock', tr_code + "OutBlock", *out_params,
+                                     **in_params)
+        return result
+
 
 if __name__ == "__main__":
     session = EBest("DEMO")
-    # print(session.user)
     session.login()
-
+    balance = session.get_0424()
+    print(balance)
     # result = session.get_current_call_price_by_code("005930")
     # print(f"price={result[0]['price']}")
     # accList = session.get_account()
