@@ -57,8 +57,8 @@ class XAReal:
 
 
 class EBest:
-    QUERY_LIMIT_10MIN = 200  # 10분당 최대 200개 쿼리, 초과하는 경우 연결 끊김, 초당 3건??
-    LIMIT_SECONDS = 600  # 10분
+    QUERY_LIMIT_10MIN = 10  # 10분당 최대 200개 쿼리, 초과하는 경우 연결 끊김, 초당 3건??
+    LIMIT_SECONDS = 30  # 10분=600초
 
     def __init__(self, mode=None):
         """
@@ -109,8 +109,10 @@ class EBest:
         while len(self.query_cnt) >= EBest.QUERY_LIMIT_10MIN:
             time.sleep(1)
             print("waiting for execute query.. current query cnt:", len(self.query_cnt))
+            print(f"남은 시간: {int(EBest.LIMIT_SECONDS) - (datetime.today() - self.query_cnt[0]).total_seconds()}초")
             self.query_cnt = list(
                 filter(lambda x: (datetime.today() - x).total_seconds() < EBest.LIMIT_SECONDS, self.query_cnt))
+
             # 오래된 쿼리를 삭제하나?? -> OK. 쿼리는 한번에 하나씩 실행됨. 밀려서 실행하지 않음. 응답을 받을때까지 쿼리를 종료하지 않음
         xa_query = win32com.client.DispatchWithEvents("XA_DataSet.XAQuery", XAQuery)
         xa_query.LoadFromResFile(XAQuery.RES_PATH + res + ".res")
@@ -151,6 +153,22 @@ class EBest:
 
         return result
 
+    def get_stock_price_by_code(self, code=None, dwmcode=1, cnt="1"):
+        """TR1505 기간별주가
+        code: str (6)
+        dwmcode: long, 1:일, 2: 주, 3: 월
+        """
+
+        tr_code = 't1305'
+        in_params = {'shcode': code, 'dwmcode': '1', 'date': "", 'idx': "", 'cnt': cnt}
+        out_params = {"date", 'shcode', 'close'}
+        result = self._execute_query(tr_code, tr_code + 'InBlock', tr_code + 'OutBlock1', *out_params, **in_params)
+
+        for item in result:
+            item['code'] = code
+
+        return result
+
     def get_tick_size(self, price):
         if price < 1000:
             return 1
@@ -186,6 +204,7 @@ class EBest:
         return result
 
     def get_code_list(self, market=None):
+        """market='KOSPI', 'KOSDAQ', 'ALL' """
         tr_code = 't8436'
         if market not in ['KOSPI', 'KOSDAQ', 'ALL']:
             raise Exception("need market param('ALL','KOSPI','KOSDAQ')")
@@ -257,11 +276,20 @@ class EBest:
         return result
 
 
+from stocklab.db_handler.mongodb_handler import MongoDBHandler
+
 if __name__ == "__main__":
     session = EBest("DEMO")
     session.login()
-    balance = session.get_0424()
-    print(balance)
+    db_client = MongoDBHandler()
+    print(db_client.list_database_names())
+
+    close = session.get_stock_price_by_code('005930', 1, "4")
+    # df_close = pd.DataFrame(close)
+    print(close)
+
+    # balance = session.get_0424()
+    # print(balance)
     # result = session.get_current_call_price_by_code("005930")
     # print(f"price={result[0]['price']}")
     # accList = session.get_account()

@@ -34,7 +34,7 @@ class TestEbest(unittest.TestCase):
         # print(f"result : ALL {len(all_result)} KOSPI {len(kospi_result)} KOSDAQ {len(kosdaq_result)}")
         print(f"result : ALL {len(all_result)}  KOSDAQ {len(kosdaq_result)}")
 
-    def test_historical_closing_price(self):
+    def _test_historical_closing_price(self):
         closing = self.ebest.get_historical_closing_price('005930', startdate='20100101', enddate='20220107')
         df_closing = pd.DataFrame(closing)
         type(df_closing)
@@ -56,6 +56,11 @@ class TestEbest(unittest.TestCase):
             df_closing.plot(kind='line', x='date', y=f'ma{ma_range[i]}', ax=ax)
 
         plt.show()
+
+    def test_get_stock_price_by_code(self):
+        close = self.ebest.get_stock_price_by_code('005930', 1, "2")
+        assert close is not None
+        print(close)
 
     def tearDown(self):
         self.ebest.logout()

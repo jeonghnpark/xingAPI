@@ -14,6 +14,12 @@ class MongoDBHandler:
         port = config['MONGODB']['port']
         self._client = MongoClient(host, int(port))
 
+    def list_database_names(self):
+        return self._client.list_database_names()
+
+    def list_collection_names(self, db_name=None):
+        return self._client[db_name].list_collection_names()
+
     def insert_item(self, data, db_name=None, collection_name=None):
         if not isinstance(data, dict):
             raise Exception("data type should be dict")
@@ -34,6 +40,7 @@ class MongoDBHandler:
             condition = {}
         if db_name is None or collection_name is None:
             raise Exception("need to param db_name, collection name")
+        
         return self._client[db_name][collection_name].find_one(condition, {"_id": False})  # id는 빼고 리턴
 
     def find_items(self, condition=None, db_name=None, collection_name=None):
@@ -98,12 +105,14 @@ class MongoDBHandler:
 
 if __name__ == "__main__":
     db = MongoDBHandler()
+    result = db.find_items({}, "stocklab", "code_info")
+    print(result)
     # id = db.insert_item({'name': "Paul", 'author': "brown"}, db_name="TEST_DATABASE_NAME", collection_name='book')
 
-    cursor = db.find_items(db_name="TEST_DATABASE_NAME", collection_name='book')
-
-    assert cursor
-
-    db.delete_items(condition={'names': "Paul"}, db_name="TEST_DATABASE_NAME", collection_name='book')
-    for doc in cursor:
-        print(doc)
+    # cursor = db.find_items(db_name="TEST_DATABASE_NAME", collection_name='book')
+    #
+    # assert cursor
+    #
+    # db.delete_items(condition={'names': "Paul"}, db_name="TEST_DATABASE_NAME", collection_name='book')
+    # for doc in cursor:
+    #     print(doc)
