@@ -57,8 +57,8 @@ class XAReal:
 
 
 class EBest:
-    QUERY_LIMIT_10MIN = 10  # 10분당 최대 200개 쿼리, 초과하는 경우 연결 끊김, 초당 3건??
-    LIMIT_SECONDS = 30  # 10분=600초
+    QUERY_LIMIT_10MIN = 200  # 10분당 최대 200개 쿼리, 초과하는 경우 연결 끊김, 초당 3건??
+    LIMIT_SECONDS = 600  # 10분=600초
 
     def __init__(self, mode=None):
         """
@@ -112,7 +112,6 @@ class EBest:
             print(f"남은 시간: {int(EBest.LIMIT_SECONDS) - (datetime.today() - self.query_cnt[0]).total_seconds()}초")
             self.query_cnt = list(
                 filter(lambda x: (datetime.today() - x).total_seconds() < EBest.LIMIT_SECONDS, self.query_cnt))
-
             # 오래된 쿼리를 삭제하나?? -> OK. 쿼리는 한번에 하나씩 실행됨. 밀려서 실행하지 않음. 응답을 받을때까지 쿼리를 종료하지 않음
         xa_query = win32com.client.DispatchWithEvents("XA_DataSet.XAQuery", XAQuery)
         xa_query.LoadFromResFile(XAQuery.RES_PATH + res + ".res")
@@ -128,7 +127,7 @@ class EBest:
         while xa_query.tr_run_state == 0:
             waiting_cnt += 1
             if waiting_cnt % 1000000 == 0:
-                print("waiting..^^", self.xa_session_client.GetLastError())
+                print("개별 쿼리의 응답이 늦어지고 있어요..^^", self.xa_session_client.GetLastError())
             pythoncom.PumpWaitingMessages()
 
         # result block
@@ -238,12 +237,69 @@ class EBest:
         return stocks
 
     def get_account(self):
+        """:return accountList:List"""
         accnum = self.xa_session_client.GetAccountListCount()
         accountList = []
         for i in range(accnum):
             accountList = self.xa_session_client.GetAccountList(i)
-            print(accountList)
+            # print(accountList)
         return accountList
+
+    def get_account_stock_info(self):
+        """현물계좌잔고내역
+        TR:CSPAQ12300
+        :param
+        res: str
+        in_block_name: str
+        out_block_name: str
+
+        in_params: dictionary
+            RecCnt: long 레코드개수
+            AcntNo: str
+            Pwd: str
+            BalCreTp: str (잔고생성구분 0:전체, 1:현물, 9:선물대용),
+            D2balBaseQryTp:str D2잔고기준조회, 0:전부조회, 1:D2잔고 0 이상만
+            in_block_name: str
+            out_blcok_name: str
+
+        out_params: list
+            IsuNo 종목번호
+            IsuNm 종목명
+            BalQty 잔고수량
+            SellPrc 매도가
+            BuyPrc 매수가
+            NowPrc 현재가
+            AvrUprc 평균단가
+            BalEvalAmt 잔고평가금액
+            PrdayCprc 전일종가
+        """
+
+        tr = "CSPAQ12300"
+        in_params = {"RecCnt": 1, "AcntNo": self.account, "Pwd": self.passwd,
+                     "BalCreTp": "0", "D2balBaseQryTp": "0"}
+        out_params = ["IsuNo", "IsuNm", "BalQty", "SellPrc", "BuyPrc",
+                      "AvrUprc", "BalEvalAmt", "PrdayCprc"]
+
+        result = self._execute_query(tr, tr + "InBlock1", tr + "OutBlock3", *out_params, **in_params)
+
+        return result
+
+    def get_account_info(self):
+        """TR:CSPAQ12200 현물계좌  예수금/주문가능금액/총평가
+        :param
+        in_params = {"RecCnt": 1, "AcntNo": self.user, "Pwd": self.passwd}
+                      레코드개수?, 계좌번호, 비밀번호
+        :return result:list
+        ["MnyOrdAbleAmt", "BalEvalAmt", "DpsastTotamt", "InvstOrgAmt", "InvstPlAmt"]
+        [현금주문가능금액, 잔고평가금액, 예탁자산총액, 투자원금, 투자손익금액]
+        """
+        tr = "CSPAQ12200"
+        in_params = {"RecCnt": 1, "AcntNo": self.account, "Pwd": self.passwd}
+        out_params = ["MnyOrdAbleAmt", "BalEvalAmt", "DpsastTotamt", "InvstOrgAmt", "InvstPlAmt"]
+
+        result = self._execute_query(tr, tr + "InBlock1", tr + "OutBlock2", *out_params, **in_params)
+
+        return result
 
     def get_historical_closing_price(self, code=None, frequency=2, startdate='20210101', enddate='20211231',
                                      comp_yn="N"):
@@ -275,8 +331,41 @@ class EBest:
                                      **in_params)
         return result
 
+    def order_stock(self, code, qty, price, bns_type, order_type):
+        """TR -> CSPAT00600, 현물 정상 주문
+            :param
+            code: str
+            qty: long
+            price : double
+            bns_type: str 매매구분 1-매도, 2-매수
+            order_type: str 호가유형코드 00@ 지정가, 03@시장가, 06@최유리지정가, 07@최우선지정가
+
+
+            :return
+            result: dict
+                OrdNo: long
+                OrdTime: str
+                OrdMktCode: str , 주문시장코드
+                OrdPtnCode: str, 주문유형코드
+                ShtnIsuNo: str, 단축종목코드
+                MgempNo: str,  관리사원번호 -> 삭제
+                OrdAmt: long, 주문금액
+                SpotOrdQty: long, 실주문수량
+                IsuNm: str, 종목명
+        """
+        tr = "CSPAT00600"
+        in_params = {"AcntNo": self.account, "InptPwd": self.passwd, "IsuNo": code, "OrdQty": qty,
+                     "BnsTpCode": bns_type, "OrdprcPtnCode": order_type, "MgntrnCode": "000",
+                     "LoanDt": "", "OrdCndiTpCode": "0"}
+        out_params = ["OrdNo", "OrdTime", "OrdMktCode", "OrdPtnCode", "ShtnIsuNo", "OrdAmt", "SpotOrdQty", "IsuNm"]
+
+        result = self._execute_query(tr, tr + "InBlock1", tr + "OutBlock2", *out_params, **in_params)
+        return result
+
 
 from stocklab.db_handler.mongodb_handler import MongoDBHandler
+
+import pandas as pd
 
 if __name__ == "__main__":
     session = EBest("DEMO")
@@ -284,9 +373,9 @@ if __name__ == "__main__":
     db_client = MongoDBHandler()
     print(db_client.list_database_names())
 
-    close = session.get_stock_price_by_code('005930', 1, "4")
-    # df_close = pd.DataFrame(close)
-    print(close)
+    close = session.get_stock_price_by_code('005930', 1, 6)
+    df_close = pd.DataFrame(close)
+    print(df_close)
 
     # balance = session.get_0424()
     # print(balance)

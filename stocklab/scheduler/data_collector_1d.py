@@ -1,4 +1,4 @@
-from mongodb_handler import MongoDBHandler
+from stocklab.db_handler.mongodb_handler import MongoDBHandler
 from stocklab.agent.ebest import EBest
 from datetime import datetime
 import time
@@ -20,12 +20,16 @@ def collect_stock_info():
     target_code = set(item['shcode'] for item in code_list)
     # 오늘 price가 있는 종목은 제외
     today = datetime.today().strftime("%Y%m%d")
+
+    # cursor에 .distinc("field_name")하는 경우 list가 리턴되며 요소의 타입은 field name의 타입임
     collect_list = mongodb.find_items({'date': today}, 'stocklab', 'price_info').distinct('code')
+
     for col in collect_list:
         target_code.remove(col)
 
-    for code in target_code:
-        result_price = ebest.get_stock_price_by_code(code, 1, "1")
+    print(list(target_code)[:10])
+    for code in list(target_code)[:12]:
+        result_price = ebest.get_stock_price_by_code(code, 1, 1)
         time.sleep(1)
         if len(result_price) > 0:
             mongodb.insert_items(result_price, 'stocklab', "price_info")

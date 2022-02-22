@@ -57,10 +57,29 @@ class TestEbest(unittest.TestCase):
 
         plt.show()
 
-    def test_get_stock_price_by_code(self):
-        close = self.ebest.get_stock_price_by_code('005930', 1, "2")
+    def _test_get_account_info(self):
+        print(inspect.stack()[0][3])  # test명
+        lst_acno = self.ebest.get_account()
+        print(lst_acno)
+
+    def _test_get_account(self):
+        acc_info = self.ebest.get_account_info()
+        assert acc_info is not None
+        print(acc_info)
+
+    def test_get_account_stock_info(self):
+        stock_info = self.ebest.get_account_stock_info()
+        assert stock_info is not None
+        print(stock_info)
+
+    def _test_get_stock_price_by_code(self):
+        close = self.ebest.get_stock_price_by_code('000020', 1, 1)
         assert close is not None
         print(close)
+
+    def _test_get_0424(self):
+        result = self.ebest.get_0424()
+        print(result)
 
     def tearDown(self):
         self.ebest.logout()
