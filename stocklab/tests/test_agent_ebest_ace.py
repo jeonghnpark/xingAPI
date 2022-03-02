@@ -1,20 +1,19 @@
 import unittest
 from stocklab.agent.ebest import EBest
-from stocklab.db_handler.mongodb_handler import MongoDBHandler
 
 import inspect
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
 
-mongo= MongoDBHandler()
-
+from stocklab.db_handler.mongodb_handler import MongoDBHandler
+mongo=MongoDBHandler()
+DB_NAME="stocklab_ace"
 
 class TestEbest(unittest.TestCase):
     def setUp(self):
-        self.ebest = EBest("DEMO")
+        self.ebest = EBest("ACE")
         self.ebest.login()
-
 
     def _test_get_current_call_price_by_code(self):
         print(inspect.stack()[0][3])
@@ -85,10 +84,17 @@ class TestEbest(unittest.TestCase):
         result = self.ebest.get_0424()
         print(result)
 
-    def _test_order_stock(self):
-        result = self.ebest.order_stock('005930', 7, 80000, "2", "00")
+
+
+    def _test_buy_stock_by_best_offer(self):
+        best_offer = self.ebest.get_current_price_by_code('005930')
+        offer_price = best_offer[0]['bidho1']
+        print(offer_price)
+        result = self.ebest.order_stock('005930', 1, float(offer_price), "2", "00")
         assert result is not None
         print(result)
+
+
 
     def _test_order_cancel_stock(self):
         # 주문먼저하고..
@@ -102,25 +108,44 @@ class TestEbest(unittest.TestCase):
             cancel_res = self.ebest.order_cancel(ordno, "005930", 1)
             # time.sleep(0.1)
 
-    def _test_order_check(self):
-        # 주문먼저하고
-        ord=self.ebest.order_stock('005930', 7, 71500, "2", "00")
-        time.sleep(1)
-        if ord:
-            res=self.ebest.order_check()
-            print(res)
-
-        check_not_traded_order=self.ebest.order_check()
+    def _test_get_current_price_by_code(self):
+        result=self.ebest.get_current_price_by_code('005930')
+        print(result)
 
 
 
+    def _test_order_cancel_stock(self):
+        # 주문먼저하고..
+        res = ebest.order_stock("005930", 6, 71100, "2", "00")
+        print("원주문", res)
+        ordno = res[0]["OrdNo"]
 
-    def test_trading_scenario(self):
-        code_list=['005930','000660']
+        #1주 취소
+        cancel_res = ebest.order_cancel(ordno, "005930", 1)
+        if cancel_res is not None:
+            cancel_res2 = ebest.order_cancel(ordno, "005930", 1)
+            if cancel_res2 is not None:
+                cancel_res3 = ebest.order_cancel(ordno, "005930", 1)
+                if cancel_res3 is not None:
+                    cancel_res4 = ebest.order_cancel(ordno, "005930", 1)
+                    if cancel_res4 is not None:
+                        cancel_res5 = ebest.order_cancel(ordno, "005930", 1)
+                        if cancel_res5 is not None:
+                            cancel_res6 = ebest.order_cancel(ordno, "005930", 1)
+
+    def _test_trading_scenario(self):
+        #주문내역 DB삭제하기
+        ordered_list=list(mongo.find_items({},DB_NAME,'order'))
+        if ordered_list is not None:
+            mongo.delete_items({},DB_NAME, 'order')
+
+        ordered_list = list(mongo.find_items({}, DB_NAME, 'order'))
+        assert len(ordered_list)==0
+
+
+        code_list=['005930']
         for code in code_list:
             time.sleep(1)
-            print(code)
-
             result = self.ebest.get_current_price_by_code(code)
             current_price = result[0]['price']
             print(f"current price of {result[0]['hname']} is ", current_price)
@@ -146,15 +171,51 @@ class TestEbest(unittest.TestCase):
                 #     IsuNm: str, 종목명
 
                 mongo.insert_item({"buy_order_doc": order_doc, "code": code, "status": "buy_ordered"},
-                                  "stocklab_demo", "order")
+                                  DB_NAME, "order")
 
             # check_sell_order(code)
+
+    def test_order_check(self):
+        # 주문먼저하고
+        # ord=self.ebest.order_stock('005930', 7, 71500, "2", "00")
+        # time.sleep(1)
+        # if ord:
+        #     res=self.ebest.order_check()
+        #     print(res)
+
+        check_not_traded_order=self.ebest.order_check()
+        print(check_not_traded_order)
 
     def tearDown(self):
         self.ebest.logout()
 
 
 
+def check_buy_completed_order(code):
+    """매수 체결 여부 체크"""
+    buy_completed_order_list = list(mongo.find_items({"$and": [{"code": code}, {"status": "buy_completed"}]},
+                                                     DB_NAME, "order"))
+
+def check_buy_order(code):
+    """매수 주문 완료 여부 체크"""
+    order_list = list(mongo.find_items({"$and": [{"code": code}, {"status": "buy_ordered"}]},
+                                       DB_NAME, "order"))
+    for order in order_list:
+        time.sleep(1)
+        code = order['code']  # order['shcode']?
+        order_no = order['buy_order_doc']['OrdNo']
+        order_cnt = order['buy_order_doc']['SpotOrdQty']
+        check_result = ebest_demo.order_check(order_no) #체결/미체결여부 확인
+        print("'check buy order result", check_result)
+        result_cnt = check_result['traded_amt']
+        if order_cnt == result_cnt:
+            mongo.update_item({"order_no": order_no},
+                              {"$set": {"buy_completed": check_result, "status": "buy_completed"}},
+                              DB_NAME, "order")
+
+            print("buy_completed", check_result)
+
+    return len(order_list)
 
 if __name__ == "__main__":
     unittest.main()

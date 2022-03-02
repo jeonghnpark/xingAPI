@@ -68,7 +68,7 @@ class MongoDBHandlerTestCase(unittest.TestCase):
         # cursor = db_stocklab.member.find()
         # print(list(cursor))
 
-    def test_find_item(self):
+    def _test_find_item(self):
         # cursor = self.mongodb_handler.find_items({}, 'stocklab', 'code_info')
         cursor = self.mongodb_handler.find_items({}, 'stocklab', 'price_info')
 
@@ -85,6 +85,36 @@ class MongoDBHandlerTestCase(unittest.TestCase):
         print("005930 case")
         for rec in cursor:
             print(rec)
+
+    def test_delete_item(self):
+
+        order_list = list(self.mongodb_handler.find_items({"status": "buy_ordered"},
+                                           "stocklab_demo", "order"))
+        if len(order_list) >0 :
+            for rec in order_list:
+                print(rec)
+            delete_result=self.mongodb_handler.delete_items({"status":"buy_ordered"},"stocklab_demo", "order")
+
+        else:
+            print("no such items found.")
+
+
+        # cursor=self.mongodb_handler.find_items({},'stocklab_demo', 'order')
+        #
+        # result = []
+        # for record in cursor:
+        #     result.append(record)
+        #
+        # for l in result[:10]:
+        #     print(l)
+
+        #
+        # if len(list(cursor))==0:
+        #     print('no such items found')
+        # else:
+        #     for rec in cursor:
+        #         print(rec)
+
 
     def _test_test(self):
         print(3)

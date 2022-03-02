@@ -29,11 +29,12 @@ class XAQuery:
     tr_run_state = 0
 
     def OnReceiveData(self, code):
-        print("OnReceiveData", code)
+        print("MyOnReceiveData", code)
         XAQuery.tr_run_state = 1
 
     def OnReceiveMessage(self, error, code, message):
-        print("OnReceiveMessage", error, code, message, XAQuery.tr_run_state)
+        print("MyOnReceiveMessage", "error-> ", error, "code ->", code, message, "XAQuery.tr_run_state->",
+              XAQuery.tr_run_state)
 
 
 class XAReal:
@@ -67,8 +68,8 @@ class EBest:
         xa_session_client 는 XASession객체
         :param mode: str -모의서버는 DEMO, 실서버는 PROD로 구별
         """
-        if mode not in ["PROD", "DEMO"]:
-            raise Exception("Need run_mode(PROD or DEMO)")
+        if mode not in ["PROD", "DEMO", "ACE"]:
+            raise Exception("Need run_mode(PROD or DEMO or ACE)")
 
         run_mode = "EBEST_" + mode
         config = configparser.ConfigParser()
@@ -184,23 +185,6 @@ class EBest:
         elif price > 500000:
             return 1000
 
-    def get_current_call_price_by_code(self, code=None):
-        """ TR: t1101 주식현재가 호가 조회
-        :param code:str 종목코드 
-        :return: 
-        """
-        tr_code = 't1101'
-        in_params = {"shcode": code}
-        out_params = {"hname", "price", "sign", "change", "diff", "volume",
-                      "jnilclose", "offerho1", "bidho1", "offerrem1", "bidrem1",
-                      "offerho2", "bidho2", "offerrem2", "bidrem2"}
-
-        result = self._execute_query(tr_code, tr_code + 'InBlock', tr_code + 'OutBlock', *out_params, **in_params)
-
-        for item in result:
-            item["code"] = code
-
-        return result
 
     def get_code_list(self, market=None):
         """market='KOSPI', 'KOSDAQ', 'ALL' """
@@ -331,15 +315,31 @@ class EBest:
                                      **in_params)
         return result
 
+    def order_cancel(self, order_no, code, qty):
+        """TR-> CSPAT00800
+        """
+        tr = "CSPAT00800"
+        in_params = {"OrgOrdNo": order_no, "AcntNo": self.account, "InptPwd": self.passwd,
+                     "IsuNo": code, "OrdQty": qty}
+        # 블록: InBlcok1
+        out_params = ["OrdNo", "PrntOrdNo", "OrdTime", "OrdPtnCode", "IsuNm"]
+        # 블록: OutBlcok2
+        # PrntOrdNo(long):모주문번호, OrdPtnCode(str) : 주문유형코드, IsuNm(str):종목명
+
+        result = self._execute_query(tr, tr + "InBlock1", tr + "OutBlock2", *out_params, **in_params)
+        return result
+
     def order_stock(self, code, qty, price, bns_type, order_type):
         """TR -> CSPAT00600, 현물 정상 주문
+            입력블록명: InBlock1
+            출력블록명: OutBlock2
+
             :param
             code: str
             qty: long
             price : double
-            bns_type: str 매매구분 1-매도, 2-매수
-            order_type: str 호가유형코드 00@ 지정가, 03@시장가, 06@최유리지정가, 07@최우선지정가
-
+            bns_type: str 매매구분 "1"-매도, "2"-매수
+            order_type: str 호가유형코드 "00"@ 지정가, "03"@시장가, "06"@최유리지정가, "07"@최우선지정가
 
             :return
             result: dict
@@ -355,12 +355,93 @@ class EBest:
         """
         tr = "CSPAT00600"
         in_params = {"AcntNo": self.account, "InptPwd": self.passwd, "IsuNo": code, "OrdQty": qty,
-                     "BnsTpCode": bns_type, "OrdprcPtnCode": order_type, "MgntrnCode": "000",
+                     "OrdPrc": price, "BnsTpCode": bns_type, "OrdprcPtnCode": order_type, "MgntrnCode": "000",
                      "LoanDt": "", "OrdCndiTpCode": "0"}
         out_params = ["OrdNo", "OrdTime", "OrdMktCode", "OrdPtnCode", "ShtnIsuNo", "OrdAmt", "SpotOrdQty", "IsuNm"]
+        # 블록 OutBlock2
+        #
 
         result = self._execute_query(tr, tr + "InBlock1", tr + "OutBlock2", *out_params, **in_params)
         return result
+
+    def get_current_price_by_code(self,code):
+        """TR:t1101
+        현재 호가조회
+        return: list
+        리턴값이 list이므로 result[0]으로 받아야함 why?
+        """
+        tr='t1101'
+        in_params={"shcode":code}
+        out_params={"hname", "price", "offerho1", "bidho1", "offerho2", 'bidho2', 'offerrem1', 'offerrem2',
+                    "bidrem1", 'bidrem2'}
+        result=self._execute_query(tr, tr+"InBlock", tr+"OutBlock",*out_params, **in_params)
+
+        for item in result:
+            item["code"]=code
+
+        return result
+
+    # def get_current_call_price_by_code(self, code=None):
+    #     """ TR: t1101 주식현재가 호가 조회
+    #     :param code:str 종목코드
+    #     :return:
+    #     """
+    #     tr_code = 't1101'
+    #     in_params = {"shcode": code}
+    #     out_params = {"hname", "price", "sign", "change", "diff", "volume",
+    #                   "jnilclose", "offerho1", "bidho1", "offerrem1", "bidrem1",
+    #                   "offerho2", "bidho2", "offerrem2", "bidrem2"}
+    #
+    #     result = self._execute_query(tr_code, tr_code + 'InBlock', tr_code + 'OutBlock', *out_params, **in_params)
+    #
+    #     for item in result:
+    #         item["code"] = code
+    #
+    #     return result
+
+
+    def rhforder_check(self, order_no=None, traded_or_not="0"):
+        """TR:t0452
+        체결미체결 여부 확인
+        traded_or_not : "0"->전체, "1"->체결, "2"->미체결
+        입력블록 t0425InBlock
+        출력블록 t0425OutBlock1
+        ordno, expcode, cheqty(체결수량), ordrem(미체결잔량)
+        """
+        tr="t0425"
+        in_params={"accno":self.account, "passwd": self.passwd, "expcode":"", "chegb": traded_or_not,
+                   "medosu": "0", "sortgb":"1", "cts_ordno": ""}
+        out_params=["ordno", "expcode", "medosu", "qty", "price", "cheqty", "cheprice",
+                    "ordrem", "cfmqty", "status", "orgordno", "ordgb", "ordermtd", "sysprocseq",
+                    "hodagb", "price1", "orggb", "singb", "loandt"]
+
+        result_list=self._execute_query(tr,tr+"InBlock", tr+"OutBlock1", *out_params, **in_params)
+        result={}
+        if order_no is not None:
+            for item in result_list:
+                if item['ordno']==order_no:
+                    result=item
+
+            return result  # 주문번호를 입력하지 않으면 list 전체를, 주문번호 입력시는 주문번호만 리턴
+        else:
+            return result_list
+
+
+    def get_tick_size(self,price):
+        if price<1000:
+            return 1
+        elif price>=1000 and price<5000:
+            return 5
+        elif price >= 5000 and price < 10000:
+            return 10
+        elif price >= 10000 and price < 50000:
+            return 50
+        elif price >= 50000 and price < 100000:
+            return 100
+        elif price >= 100000 and price < 500000:
+            return 500
+        elif price >= 500000:
+            return 1000
 
 
 from stocklab.db_handler.mongodb_handler import MongoDBHandler
@@ -368,14 +449,48 @@ from stocklab.db_handler.mongodb_handler import MongoDBHandler
 import pandas as pd
 
 if __name__ == "__main__":
-    session = EBest("DEMO")
-    session.login()
-    db_client = MongoDBHandler()
-    print(db_client.list_database_names())
+    ebest = EBest("DEMO")
+    ebest.login()
+    res = ebest.order_stock("005930", 6, 80000, "2", "00")
+    print(res)
+    ebest.logout()
 
-    close = session.get_stock_price_by_code('005930', 1, 6)
-    df_close = pd.DataFrame(close)
-    print(df_close)
+    # ebest = EBest("DEMO")
+    # ebest.login()
+    # res = ebest.order_stock("005930", 6, 71600, "2", "00")
+    # print("원주문", res)
+    # ordno = res[0]["OrdNo"]
+    # 
+    # # time.sleep(1)
+    # cancel_res = ebest.order_cancel(ordno, "005930", 1)
+    # # if cancel_res is not None:
+    # #     print("첫 취소주문", cancel_res)
+    # 
+    # # time.sleep(1)
+    # if cancel_res is not None:
+    #     cancel_res2 = ebest.order_cancel(ordno, "005930", 1)
+    #     if cancel_res2 is not None:
+    #         cancel_res3 = ebest.order_cancel(ordno, "005930", 1)
+    #         if cancel_res3 is not None:
+    #             cancel_res4 = ebest.order_cancel(ordno, "005930", 1)
+    #             if cancel_res4 is not None:
+    #                 cancel_res5 = ebest.order_cancel(ordno, "005930", 1)
+    #                 if cancel_res5 is not None:
+    #                     cancel_res6 = ebest.order_cancel(ordno, "005930", 1)
+
+    # cancel_res2 = ebest.order_cancel(ordno, "005930", 1)
+    # cancel_res2 = ebest.order_cancel(ordno, "005930", 1)
+    # if cancel_res2 is not None:
+    #     print("첫 취소주문", cancel_res2)
+
+    # time.sleep(1)
+    # cancel_res2 = ebest.order_cancel(ordno, "005930", 2)
+    # if cancel_res2 is not None:
+    #     print(cancel_res2)
+
+    # close = session.get_stock_price_by_code('005930', 1, 6)
+    # df_close = pd.DataFrame(close)
+    # print(df_close)
 
     # balance = session.get_0424()
     # print(balance)
