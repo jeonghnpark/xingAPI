@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 from stocklab.db_handler.mongodb_handler import MongoDBHandler
 mongo=MongoDBHandler()
 DB_NAME="stocklab_ace"
+ebest_ace=EBest("ACE")
+
 
 class TestEbest(unittest.TestCase):
     def setUp(self):
@@ -134,13 +136,14 @@ class TestEbest(unittest.TestCase):
                             cancel_res6 = ebest.order_cancel(ordno, "005930", 1)
 
     def _test_trading_scenario(self):
-        #주문내역 DB삭제하기
-        ordered_list=list(mongo.find_items({},DB_NAME,'order'))
-        if ordered_list is not None:
-            mongo.delete_items({},DB_NAME, 'order')
 
-        ordered_list = list(mongo.find_items({}, DB_NAME, 'order'))
-        assert len(ordered_list)==0
+        """ 주문내역 DB삭제"""
+        # ordered_list=list(mongo.find_items({},DB_NAME,'order'))
+        # if ordered_list is not None:
+        #     mongo.delete_items({},DB_NAME, 'order')
+        # #삭제확인
+        # ordered_list = list(mongo.find_items({}, DB_NAME, 'order'))
+        # assert len(ordered_list)==0
 
 
         code_list=['005930']
@@ -149,12 +152,51 @@ class TestEbest(unittest.TestCase):
             result = self.ebest.get_current_price_by_code(code)
             current_price = result[0]['price']
             print(f"current price of {result[0]['hname']} is ", current_price)
-            """check buy order"""
-            buy_order_cnt = check_buy_order(code)
-            check_buy_completed_order(code)
+
+            # buy_order_cnt = check_buy_order(code) #체결여부 확인후 체결되었다면 상태변경
+
+            """ DB에서 매수가 들어간 목록에 대해서
+            ebest에 쿼리하여 체결여부를 확인한후 체결되었다면
+            DB의 상태를 변경함"""
+            order_list = list(mongo.find_items({"$and": [{"code": code}, {"status": "buy_ordered"}]},
+                                               DB_NAME, "order"))
+            for order in order_list:  #
+                time.sleep(1)
+                code = order['code']  # order['shcode']?
+                order_no = order['buy_order_doc']['OrdNo']
+                order_cnt = order['buy_order_doc']['SpotOrdQty']  # 실주문수량
+                check_result = self.ebest.order_check(order_no)  # 쿼리하여 체결/미체결여부 확인
+
+                print("'check buy order result", check_result)
+                result_cnt = check_result['cheqty']  # 체결수량
+                if order_cnt == result_cnt:
+                    mongo.update_item({"buy_order_doc.OrdNo": order_no},
+                                      {"$set": {"buy_completed_doc": check_result, "status": "buy_completed"}},
+                                      DB_NAME, "order")
+
+                    print("buy_completed", check_result)
+
+            #check_buy_completed_order(code) # 매수완료되었다면 매도 주문
+            """매수 완료된 주문에 대해서 10틱위로 매도 주문 넣기"""
+            buy_completed_order_list = list(mongo.find_items({"$and": [{"code": code}, {"status": "buy_completed"}]},
+                                                             DB_NAME, "order"))
+            """매도 주문"""
+            for buy_completed_order in buy_completed_order_list:
+                buy_price = buy_completed_order['buy_completed_doc']['price']  # 체결가격
+                buy_order_no = buy_completed_order['buy_completed_doc']['ordno']
+                tick_size = self.ebest.get_tick_size(int(buy_price))
+                print('tick size', tick_size)
+                sell_price = int(buy_price) + tick_size * 10
+                sell_order = self.ebest.order_stock(code, "2", str(sell_price), "1", "00")
+                print("order_stock", sell_order)
+                mongo.update_item({"buy_completed_doc.ordno": buy_order_no},
+                                  {"$set": {"sell_order_doc": sell_order[0], "status": "sell_ordered"}},
+                                  DB_NAME, "order")  # TODO : sell_order[0] why?
+
+            '''보유 종목 없을시 무조건(as a strategy) 신규매수'''
+            buy_order_cnt=len(order_list)
 
             if buy_order_cnt == 0:
-                """보유 종목 없을시 무조건(as a strategy) 신규매수 """
                 order = self.ebest.order_stock(code, "2", current_price, "2", "00")
                 print("order_stock", order)
                 order_doc = order[0]
@@ -176,46 +218,67 @@ class TestEbest(unittest.TestCase):
             # check_sell_order(code)
 
     def test_order_check(self):
-        # 주문먼저하고
-        # ord=self.ebest.order_stock('005930', 7, 71500, "2", "00")
-        # time.sleep(1)
+        """주문먼저하고"""
+        current=self.ebest.get_current_price_by_code('005930')
+        time.sleep(1)
+        print(current[0]['price'])
+        ord=self.ebest.order_stock('005930', 3, current[0]['price'], "2", "00")
+        time.sleep(1)
         # if ord:
         #     res=self.ebest.order_check()
         #     print(res)
 
-        check_not_traded_order=self.ebest.order_check()
-        print(check_not_traded_order)
+        check_not_traded_order=self.ebest.order_check(ord[0]['OrdNo'])
+        for order in check_not_traded_order:
+            print(check_not_traded_order)
 
     def tearDown(self):
         self.ebest.logout()
 
 
-
-def check_buy_completed_order(code):
-    """매수 체결 여부 체크"""
-    buy_completed_order_list = list(mongo.find_items({"$and": [{"code": code}, {"status": "buy_completed"}]},
-                                                     DB_NAME, "order"))
-
-def check_buy_order(code):
-    """매수 주문 완료 여부 체크"""
-    order_list = list(mongo.find_items({"$and": [{"code": code}, {"status": "buy_ordered"}]},
-                                       DB_NAME, "order"))
-    for order in order_list:
-        time.sleep(1)
-        code = order['code']  # order['shcode']?
-        order_no = order['buy_order_doc']['OrdNo']
-        order_cnt = order['buy_order_doc']['SpotOrdQty']
-        check_result = ebest_demo.order_check(order_no) #체결/미체결여부 확인
-        print("'check buy order result", check_result)
-        result_cnt = check_result['traded_amt']
-        if order_cnt == result_cnt:
-            mongo.update_item({"order_no": order_no},
-                              {"$set": {"buy_completed": check_result, "status": "buy_completed"}},
-                              DB_NAME, "order")
-
-            print("buy_completed", check_result)
-
-    return len(order_list)
+# def check_buy_completed_order(code):
+#     """매수 완료된 주문은 매도 주문
+#     """
+#     buy_completed_order_list = list(mongo.find_items({"$and": [{"code": code}, {"status": "buy_completed"}]},
+#                                                      DB_NAME, "order"))
+#
+#     # 매도 주문
+#     for buy_completed_order in buy_completed_order_list:
+#         buy_price = buy_completed_order['buy_completed_doc']['price']  # 체결가격
+#         buy_order_no = buy_completed_order['buy_completed_doc']['ordno']
+#         tick_size = ebest_ace.get_tick_size(int(buy_price))
+#         print('tick size', tick_size)
+#         sell_price = int(buy_price) + tick_size * 10
+#         sell_order = ebest_ace.order_stock(code, "2", str(sell_price), "1", "00")
+#         print("order_stock", sell_order)
+#         mongo.update_item({"buy_completed_doc.ordno": buy_order_no},
+#                           {"$set": {"sell_order_doc": sell_order[0], "status": "sell_ordered"}},
+#                           DB_NAME, "order")  # TODO : sell_order[0] why?
+#
+#
+# def check_buy_order(code):
+#     """ DB에서 매수가 들어간 목록에 대해서
+#     ebest에 쿼리하여 체결여부를 확인한후 체결되었다면
+#     DB의 상태를 변경함"""
+#     order_list = list(mongo.find_items({"$and": [{"code": code}, {"status": "buy_ordered"}]},
+#                                        DB_NAME, "order"))
+#     for order in order_list:  #
+#         time.sleep(1)
+#         code = order['code']  # order['shcode']?
+#         order_no = order['buy_order_doc']['OrdNo']
+#         order_cnt = order['buy_order_doc']['SpotOrdQty']  # 실주문수량
+#         check_result = ebest_ace.order_check(order_no)  # 쿼리하여 체결/미체결여부 확인
+#
+#         print("'check buy order result", check_result)
+#         result_cnt = check_result['cheqty']  # 체결수량
+#         if order_cnt == result_cnt:
+#             mongo.update_item({"buy_order_doc.OrdNo": order_no},
+#                               {"$set": {"buy_completed_doc": check_result, "status": "buy_completed"}},
+#                               DB_NAME, "order")
+#
+#             print("buy_completed", check_result)
+#
+#     return len(order_list)
 
 if __name__ == "__main__":
     unittest.main()

@@ -342,7 +342,7 @@ class EBest:
             order_type: str 호가유형코드 "00"@ 지정가, "03"@시장가, "06"@최유리지정가, "07"@최우선지정가
 
             :return
-            result: dict
+            result: list of dict -> result[0]으로 받아야함.
                 OrdNo: long
                 OrdTime: str
                 OrdMktCode: str , 주문시장코드
@@ -400,13 +400,13 @@ class EBest:
     #     return result
 
 
-    def rhforder_check(self, order_no=None, traded_or_not="0"):
-        """TR:t0452
-        체결미체결 여부 확인
+    def order_check(self, order_no=None, traded_or_not="0"):
+        """TR:t0425
+        체결미체결 여부 확인, 초당 1건
         traded_or_not : "0"->전체, "1"->체결, "2"->미체결
         입력블록 t0425InBlock
         출력블록 t0425OutBlock1
-        ordno, expcode, cheqty(체결수량), ordrem(미체결잔량)
+        ordno, expcode, price(주문가격), cheprice(체결가격), cheqty(체결수량), ordrem(미체결잔량)
         """
         tr="t0425"
         in_params={"accno":self.account, "passwd": self.passwd, "expcode":"", "chegb": traded_or_not,
@@ -427,6 +427,10 @@ class EBest:
             return result_list
 
 
+    def order_check2(self,order_no=None,traded_or_not="0"):
+        """TR: CSPAQ13700"""
+        tr="CSPAQ13700"
+        in_params={"AcntNo":self.account, "InptPwd":self.passwd, }
     def get_tick_size(self,price):
         if price<1000:
             return 1
