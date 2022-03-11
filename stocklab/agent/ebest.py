@@ -430,7 +430,8 @@ class EBest:
     def order_check2(self,order_no=None,traded_or_not="0"):
         """TR: CSPAQ13700"""
         tr="CSPAQ13700"
-        in_params={"AcntNo":self.account, "InptPwd":self.passwd, }
+        in_params={"RecCnt":"1","AcntNo":self.account, "InptPwd":self.passwd,
+                   }
     def get_tick_size(self,price):
         if price<1000:
             return 1
@@ -453,11 +454,12 @@ from stocklab.db_handler.mongodb_handler import MongoDBHandler
 import pandas as pd
 
 if __name__ == "__main__":
-    ebest = EBest("DEMO")
-    ebest.login()
-    res = ebest.order_stock("005930", 6, 80000, "2", "00")
-    print(res)
-    ebest.logout()
+    pass
+    # ebest = EBest("DEMO")
+    # ebest.login()
+    # res = ebest.order_stock("005930", 6, 80000, "2", "00")
+    # print(res)
+    # ebest.logout()
 
     # ebest = EBest("DEMO")
     # ebest.login()

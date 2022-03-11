@@ -8,14 +8,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 mongo= MongoDBHandler()
-ebest=EBest("DEMO")
+ebest_ace=EBest("ACE")
 
-DB_NAME="stocklab_demo"
+DB_NAME="stocklab_ace"
 
 
 class TestEbest(unittest.TestCase):
     def setUp(self):
-        self.ebest = EBest("DEMO")
+        self.ebest = EBest("ACE")
         self.ebest.login()
 
 
@@ -64,9 +64,9 @@ class TestEbest(unittest.TestCase):
 
         plt.show()
 
-    def test_get_account_info(self):
+    def _test_get_account_info(self):
         print(inspect.stack()[0][3])  # test명
-        lst_acno = ebest.get_account()
+        lst_acno = self.ebest.get_account()
         print(lst_acno)
 
     def _test_get_account(self):
@@ -115,7 +115,7 @@ class TestEbest(unittest.TestCase):
 
         check_not_traded_order=self.ebest.order_check()
 
-    def _test_trading_scenario(self):
+    def test_trading_scenario(self):
 
         #주문내역 DB삭제하기
         # ordered_list=list(mongo.find_items({},DB_NAME,'order'))
@@ -173,10 +173,10 @@ def check_buy_completed_order(code):
     for buy_completed_order in buy_completed_order_list:
         buy_price=buy_completed_order['buy_completed_doc']['price'] # 체결가격
         buy_order_no=buy_completed_order['buy_completed_doc']['ordno']
-        tick_size=ebest.get_tick_size(int(buy_price))
+        tick_size=ebest_demo.get_tick_size(int(buy_price))
         print('tick size', tick_size)
         sell_price=int(buy_price)+tick_size*10
-        sell_order=ebest.order_stock(code,"2", str(sell_price), "1", "00")
+        sell_order=ebest_demo.order_stock(code,"2", str(sell_price), "1", "00")
         print("order_stock", sell_order)
         mongo.update_item({"buy_completed_doc.ordno":buy_order_no},
                           {"$set":{"sell_order_doc":sell_order[0], "status": "sell_ordered"}},
@@ -194,7 +194,7 @@ def check_buy_order(code):
         code = order['code']  # order['shcode']?
         order_no = order['buy_order_doc']['OrdNo']
         order_cnt = order['buy_order_doc']['SpotOrdQty'] #실주문수량
-        check_result = ebest.order_check(order_no) #쿼리하여 체결/미체결여부 확인
+        check_result = ebest_demo.order_check(order_no) #쿼리하여 체결/미체결여부 확인
 
         print("'check buy order result", check_result)
         result_cnt = check_result['cheqty'] #체결수량

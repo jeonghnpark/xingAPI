@@ -9,12 +9,12 @@ from stocklab.db_handler.mongodb_handler import MongoDBHandler
 
 from multiprocessing import Process
 
-#demo mode
-#TODO: 전역변수를 매번 다시 실행하는 문제
-ebest=EBest("DEMO")
+#ace mode
+ebest=EBest("ACE")
 ebest.login()
 mongo=MongoDBHandler()
-DB_NAME="stocklab_demo"
+
+DB_NAME="stocklab_ace"
 
 
 def check_sell_order(code):
@@ -54,7 +54,7 @@ def check_buy_completed_order(code):
         buy_order_no=buy_completed_order['buy_completed_doc']['ordno']
         tick_size=ebest.get_tick_size(int(buy_price))
         print('tick size', tick_size)
-        sell_price=int(buy_price)+tick_size*3  #3tick 위로 매도주문
+        sell_price=int(buy_price)+tick_size*10
         sell_order=ebest.order_stock(code,"2", str(sell_price), "1", "00")
         print("order_stock", sell_order)
         mongo.update_item({"buy_completed_doc.ordno":buy_order_no},
@@ -92,7 +92,7 @@ def trading_scenario(code_list):
     for code in code_list:
         time.sleep(1)
         print(code)
-        print('before ebest.get_current_price_by_code')
+
         result = ebest.get_current_price_by_code(code)
         current_price = result[0]['price']
         offerho1=result[0]['offerho1']
@@ -161,18 +161,18 @@ if __name__ == "__main__":
     ordered_list = list(mongo.find_items({}, DB_NAME, 'order'))
     assert len(ordered_list)==0
 
+
     scheduler = BackgroundScheduler()
     day = datetime.now() - timedelta(days=4)
     today = day.strftime("%Y%m%d")
     code_list = ["005930"]
-    code="005930"
 
     print('today', today)
 
     #trigger="interval", minutes=1 인 경우 프로그램 시작후 1분간격
     #trigger="cron", minute="05" 는 매시 5분, 10분 에 실행됨
     scheduler.add_job(func=run_process_trading_scenario,
-                      trigger="interval", seconds=10, id='demo',
+                      trigger="interval", seconds=30, id='demo',
                       kwargs={"code_list": code_list})
 
     # scheduler.add_job(func=run_process_trading_scenario,
@@ -180,8 +180,7 @@ if __name__ == "__main__":
     #                   kwargs={"code_list": code_list})
 
     scheduler.start()
-    # start_time=datetime.now()
 
     while True:
-        print(f"wait... {datetime.now()}")
+        print("wait... ", datetime.now())
         time.sleep(1)
