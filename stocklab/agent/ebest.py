@@ -8,6 +8,9 @@ import os
 
 import csv
 
+from stocklab.db_handler.mongodb_handler import MongoDBHandler
+
+import pandas as pd
 
 class XASession:
     login_state = 0
@@ -449,9 +452,33 @@ class EBest:
             return 1000
 
 
-from stocklab.db_handler.mongodb_handler import MongoDBHandler
+    def get_price_n_min_by_code(self,date, code, tick=None):
+        """TR=tr8412
+        주식 분차트(N분)
+        :params: tick:long n-> n분, 0-> 30초
+        :return:result: tick=None인 경우 dict, tick=None인 경우 list of dict
+        """
+        tr="t8412"
+        """in_params
+        :params: "ncnt":"0"->0.5분, "1" -> 1분, 2->2분
+        """
+        in_params={"shcode":code, "ncnt": "1", "qrycnt":"500", "nday":"1", "sdate": date,
+                   "stime": "090000", "edate":date, "etime": "153000",
+                   "cts_date":"00000000", "cts_time":"0000000000", "comp_yn":"N"}
 
-import pandas as pd
+        out_params=["date", "time", "open", "high", "low","close", "jdiff_vol", "value"]
+        
+        result_list=self._execute_query(tr, tr+'InBlock', tr+'OutBlock1', *out_params, **in_params)
+
+        result=[]
+        for idx, item in enumerate(result_list):
+            # result[idx]=item
+            result.append(item)
+
+        if tick is not None:
+            return result[tick]
+
+        return result
 
 if __name__ == "__main__":
     pass

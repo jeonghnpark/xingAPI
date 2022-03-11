@@ -65,7 +65,9 @@ def check_buy_completed_order(code):
 def check_buy_order(code):
     """ DB에서 매수가 들어간 목록에 대해서
     ebest에 쿼리하여 체결여부를 확인한후 체결되었다면
-    DB의 상태를 'status': 'buy_completed' 로변경하고,  'buy_completed_doc' 필드기록"""
+    DB의 상태를 'status': 'buy_completed' 로변경하고,  'buy_completed_doc' 필드기록
+    Return: list of doc
+    """
     order_list = list(mongo.find_items({"$and": [{"code": code}, {"status": "buy_ordered"}]},
                                        DB_NAME, "order"))
     for order in order_list: #
@@ -137,6 +139,15 @@ def trading_scenario(code_list):
         check_sell_order(code)  #"status": "sell_ordered" 항목에 대해서 체결되었는지 체크 후 체결시에.
                                 #상태변경: 'status':'sell_ordered'-> 'sell_completed'
                                 #매도주문필드 추가: 'sell_completed_doc':check_result
+
+
+def trading_scenario2(code):
+    """현재가보다 3틱 아래로 매수후, 관찰, 현재가 도달시 실현"""
+    prc=ebest.get_current_price_by_code(code)
+    tick_size=ebest.get_tick_size(prc)
+    buy_order_doc=ebest.order_stock(code, 1, prc-tick_size*3,"2", "00")
+
+    buy_order_list=check_buy_order(code)
 
 
 def run_process_trading_scenario(code_list):

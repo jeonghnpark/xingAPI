@@ -6,6 +6,7 @@ import inspect
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
+import datetime
 
 mongo= MongoDBHandler()
 ebest=EBest("DEMO")
@@ -64,7 +65,7 @@ class TestEbest(unittest.TestCase):
 
         plt.show()
 
-    def test_get_account_info(self):
+    def _test_get_account_info(self):
         print(inspect.stack()[0][3])  # test명
         lst_acno = ebest.get_account()
         print(lst_acno)
@@ -159,7 +160,18 @@ class TestEbest(unittest.TestCase):
                                   "stocklab_demo", "order")
 
             # check_sell_order(code)
+    def test_get_price_n_minn_by_code(self):
+        code_list=['005930', "015760"]
+        theday=datetime.datetime.today()-datetime.timedelta(days=4)
+        theday = theday.strftime("%Y%m%d")
+        #090500 데이터
+        result=ebest.get_price_n_min_by_code(theday, code_list[0])
+        for re in result:
+            print(f"090500 데이터\n{re}")
 
+        #당일의 모든 분데이터
+        # result_list=ebest.get_price_n_min_by_code(theday, code_list[1])
+        # print(f"당일 모든 데이터\n{result_list}")
     def tearDown(self):
         self.ebest.logout()
 
