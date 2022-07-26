@@ -7,6 +7,7 @@ import win32com.client
 import os
 
 import csv
+import ctypes  #윈도우 api 호출, 메시지 창 띄우기-> https://blog.joyfui.com/1113
 
 from stocklab.db_handler.mongodb_handler import MongoDBHandler
 
@@ -18,6 +19,12 @@ class XASession:
     def OnLogin(self, code, msg):
         if code == "0000":
             print(code, msg)
+            # win_msg = ctypes.windll.user32.MessageBoxW(None,msg, "알림", 1)
+            # if win_msg == 1:
+            #     print("OK")
+            #     XASession.login_state = 1
+            # elif win_msg==2:
+            #     print("Log-in cancelled.")
             XASession.login_state = 1
         else:
             print(code, msg)
@@ -94,6 +101,15 @@ class EBest:
         # 객체가 만들어지므로 콜백 클래스의 기능을 쓸수 있다고 한다.. 뭔말인지
 
         self.xa_session_client = win32com.client.DispatchWithEvents("XA_Session.XASession", XASession)
+        if run_mode=="PROD":
+            win_msg = ctypes.windll.user32.MessageBoxW(None,msg, "알림", 1)
+            if win_msg == 1:
+                print("OK")
+                self.xa_session_client.login_state = 1
+            elif win_msg==2:
+                print("Log-in cancelled.")
+                self.xa_session_client.login_state = 0
+                quit()
 
         self.query_cnt = []
 
@@ -402,7 +418,6 @@ class EBest:
     #
     #     return result
 
-
     def order_check(self, order_no=None, traded_or_not="0"):
         """TR:t0425
         체결미체결 여부 확인, 초당 1건
@@ -428,7 +443,6 @@ class EBest:
             return result  # 주문번호를 입력하지 않으면 list 전체를, 주문번호 입력시는 주문번호만 리턴
         else:
             return result_list
-
 
     def order_check2(self,order_no=None,traded_or_not="0"):
         """TR: CSPAQ13700"""
@@ -481,9 +495,10 @@ class EBest:
         return result
 
 if __name__ == "__main__":
-    pass
-    # ebest = EBest("DEMO")
-    # ebest.login()
+    #pass
+    ebest = EBest("DEMO")
+    #ebest=EBest("PROD")
+    ebest.login()
     # res = ebest.order_stock("005930", 6, 80000, "2", "00")
     # print(res)
     # ebest.logout()

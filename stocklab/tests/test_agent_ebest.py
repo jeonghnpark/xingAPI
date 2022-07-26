@@ -8,17 +8,20 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import datetime
 
-mongo= MongoDBHandler()
-ebest=EBest("DEMO")
 
-DB_NAME="stocklab_demo"
+SERVER_NAME="DEMO"
+
+mongo= MongoDBHandler()
+
+ebest=EBest(SERVER_NAME)
+
+DB_NAME="stocklab_ace"
 
 
 class TestEbest(unittest.TestCase):
     def setUp(self):
-        self.ebest = EBest("DEMO")
+        self.ebest = EBest(SERVER_NAME)
         self.ebest.login()
-
 
     def _test_get_current_call_price_by_code(self):
         print(inspect.stack()[0][3])
@@ -42,7 +45,7 @@ class TestEbest(unittest.TestCase):
         # print(f"result : ALL {len(all_result)} KOSPI {len(kospi_result)} KOSDAQ {len(kosdaq_result)}")
         print(f"result : ALL {len(all_result)}  KOSDAQ {len(kosdaq_result)}")
 
-    def _test_historical_closing_price(self):
+    def test_historical_closing_price(self):
         closing = self.ebest.get_historical_closing_price('005930', startdate='20100101', enddate='20220107')
         df_closing = pd.DataFrame(closing)
         type(df_closing)
@@ -160,12 +163,15 @@ class TestEbest(unittest.TestCase):
                                   "stocklab_demo", "order")
 
             # check_sell_order(code)
-    def test_get_price_n_minn_by_code(self):
+    def _test_get_price_n_minn_by_code(self):
+
         code_list=['005930', "015760"]
+        code='005930'
+
         theday=datetime.datetime.today()-datetime.timedelta(days=4)
         theday = theday.strftime("%Y%m%d")
         #090500 데이터
-        result=ebest.get_price_n_min_by_code(theday, code_list[0])
+        result=ebest.get_price_n_min_by_code(theday, code)
         for re in result:
             print(f"090500 데이터\n{re}")
 

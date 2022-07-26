@@ -16,12 +16,13 @@ class XASession:
         XASession.login_state = 0
 
 
-client = win32com.client.Dispatch("XA_Session.XASession", XASession)
+client = win32com.client.DispatchWithEvents("XA_Session.XASession", XASession)
 client.ConnectServer("demo.ebestsec.co.kr", 20001)
 client.Login('tunan', 'hn141437','',0,0)
 
 while XASession.login_state==0:
     pythoncom.PumpWaitingMessages()
+
 
 # self.xa_session_client.Login(self.user, self.passwd, self.cert_passwd, 0, 0)
 

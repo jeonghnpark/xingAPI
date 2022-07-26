@@ -4,6 +4,9 @@ from PyQt5.QtCore import *
 
 
 class MyWindow(QMainWindow):
+    #gui연습
+    #LineEdit객체에 텍스트를 쓰면 상태바에 텍스트를 표시함
+
     def __init__(self):
         super().__init__()
         self.setUpUI()
